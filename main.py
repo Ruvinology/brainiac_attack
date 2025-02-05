@@ -1,4 +1,5 @@
 import pygame
+import random
 
 # Initialize Pygame
 pygame.init()
@@ -12,24 +13,36 @@ BUTTON_HOVER_COLOR = (150, 150, 255)
 MOVE_SPEED = 5  # Speed of movement
 LASER_SPEED = 10  # Speed of the laser
 LASER_COLOR = (255, 0, 0)  # Laser color
-LASER_WIDTH, LASER_HEIGHT = 200, 3  # Laser dimensions
+LASER_WIDTH, LASER_HEIGHT = 20, 3  # Laser dimensions
 FIRE_RATE = 200  # Laser fire rate in milliseconds
+FLOAT_SPEED = 30  # Speed of the floating random images
+NUM_RANDOM_IMAGES = 5  # Number of random images to display
+NUM_RANDOM_IMAGES_2 = 3  # Number of random image 2 to display
 
 # Load background images
 background_menu = pygame.image.load("C:/Users/Windows 10/Downloads/decorative-glowing-neon-frame/5924401.jpg")
 background_menu = pygame.transform.scale(background_menu, (WIDTH, HEIGHT))
 
-# Load image to be moved
+# Load images
 moving_image = pygame.image.load("C:/Users/Windows 10/Downloads/58864914d27829db9cf6da4f.png")  # Replace with the correct path
 image_width, image_height = 220, 220  # Define the image size
 moving_image = pygame.transform.scale(moving_image, (image_width, image_height))
+
+# Load random images
+random_image = pygame.image.load("C:/Users/Windows 10/Downloads/robot2.png")  # Replace with the correct path
+random_image_width, random_image_height = 200, 200
+random_image = pygame.transform.scale(random_image, (random_image_width, random_image_height))
+
+random_image_2 = pygame.image.load("C:/Users/Windows 10/Downloads/robot.png")  # Replace with the correct path
+random_image_2_width, random_image_2_height =250, 250
+random_image_2 = pygame.transform.scale(random_image_2, (random_image_2_width, random_image_2_height))
 
 # Create screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pygame Example")
 
 # Load game background image
-background_game = pygame.image.load("C:/Users/Windows 10/Downloads/modern-city-night-scene/23532.jpg")
+background_game = pygame.image.load("C:/Users/Windows 10/Downloads/blue-alien-planet-surface-with-desert-rock/32630909-35aa-4364-bf7f-31dc56e1c3d3.jpg")
 background_game = pygame.transform.scale(background_game, (WIDTH, HEIGHT))
 
 # Fonts
@@ -52,6 +65,24 @@ flipped = False
 # Spacebar firing state
 space_pressed = False
 last_fired_time = 0  # Timer to control firing rate
+
+# Random images data for random_image
+random_images = []
+for _ in range(NUM_RANDOM_IMAGES):
+    random_x = random.randint(0, WIDTH - random_image_width)
+    random_y = random.randint(0, HEIGHT - random_image_height)
+    random_dx = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_dy = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_images.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
+
+# Random images data for random_image_2
+random_images_2 = []
+for _ in range(NUM_RANDOM_IMAGES_2):
+    random_x = random.randint(0, WIDTH - random_image_2_width)
+    random_y = random.randint(0, HEIGHT - random_image_2_height)
+    random_dx = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_dy = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_images_2.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
 
 
 def draw_main_menu():
@@ -123,9 +154,9 @@ while running:
         current_time = pygame.time.get_ticks()
         if space_pressed and current_time - last_fired_time > FIRE_RATE:
             if flipped:
-                laser_x = image_x +LASER_WIDTH // 2-258 # Laser from the left side when flipped
+                laser_x = image_x  # Laser from the left side when flipped
             else:
-                laser_x = image_x + image_width + LASER_WIDTH // 2 -135  # Laser from the right side
+                laser_x = image_x + image_width + LASER_WIDTH // 2 - 50  # Laser from the right side
             laser_y = image_y + image_height // 2 - LASER_HEIGHT // 3 - 85
             lasers.append({"rect": pygame.Rect(laser_x, laser_y, LASER_WIDTH, LASER_HEIGHT), "direction": -1 if flipped else 1})
             last_fired_time = current_time
@@ -137,6 +168,26 @@ while running:
                 lasers.remove(laser)
             else:
                 pygame.draw.rect(screen, LASER_COLOR, laser["rect"])
+
+        # Move random images (random_image)
+        for img in random_images:
+            img["x"] += img["dx"]
+            img["y"] += img["dy"]
+            if img["x"] <= 0 or img["x"] >= WIDTH - random_image_width:
+                img["dx"] *= -1
+            if img["y"] <= 0 or img["y"] >= HEIGHT - random_image_height:
+                img["dy"] *= -1
+            screen.blit(random_image, (img["x"], img["y"]))
+
+        # Move random images (random_image_2)
+        for img in random_images_2:
+            img["x"] += img["dx"]
+            img["y"] += img["dy"]
+            if img["x"] <= 0 or img["x"] >= WIDTH - random_image_2_width:
+                img["dx"] *= -1
+            if img["y"] <= 0 or img["y"] >= HEIGHT - random_image_2_height:
+                img["dy"] *= -1
+            screen.blit(random_image_2, (img["x"], img["y"]))
 
         # Draw the moving image at its new position
         screen.blit(moving_image, (image_x, image_y))
