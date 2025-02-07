@@ -15,9 +15,14 @@ LASER_SPEED = 10  # Speed of the laser
 LASER_COLOR = (255, 0, 0)  # Laser color
 LASER_WIDTH, LASER_HEIGHT = 20, 3  # Laser dimensions
 FIRE_RATE = 200  # Laser fire rate in milliseconds
-FLOAT_SPEED = 30  # Speed of the floating random images
-NUM_RANDOM_IMAGES = 5  # Number of random images to display
-NUM_RANDOM_IMAGES_2 = 3  # Number of random image 2 to display
+FLOAT_SPEED_1 = 3  # Speed for the first set of random images
+FLOAT_SPEED_2 = 0.5 # Speed for the second set of random images
+NUM_RANDOM_IMAGES = 3  # Number of random images to display
+NUM_RANDOM_IMAGES_2 = 2  # Number of random image 2 to display
+RANDOM_IMAGE_FIRE_RATE = 1500  # Fire rate for random image lasers
+
+# Laser dimensions for random image 2
+RANDOM_IMAGE_2_LASER_WIDTH, RANDOM_IMAGE_2_LASER_HEIGHT = 100, 30
 
 # Load background images
 background_menu = pygame.image.load("C:/Users/Windows 10/Downloads/decorative-glowing-neon-frame/5924401.jpg")
@@ -34,7 +39,7 @@ random_image_width, random_image_height = 200, 200
 random_image = pygame.transform.scale(random_image, (random_image_width, random_image_height))
 
 random_image_2 = pygame.image.load("C:/Users/Windows 10/Downloads/robot.png")  # Replace with the correct path
-random_image_2_width, random_image_2_height =250, 250
+random_image_2_width, random_image_2_height = 250, 250
 random_image_2 = pygame.transform.scale(random_image_2, (random_image_2_width, random_image_2_height))
 
 # Create screen
@@ -51,6 +56,7 @@ font = pygame.font.Font(None, 50)
 # Game states
 MAIN_MENU = 0
 GAME_RUNNING = 1
+GAME_OVER = 2
 state = MAIN_MENU
 
 # Initial position of the moving image
@@ -58,6 +64,7 @@ image_x, image_y = WIDTH // 2, HEIGHT // 2
 
 # Laser list to hold active lasers
 lasers = []
+random_image_lasers = []
 
 # Track if the image is flipped
 flipped = False
@@ -65,14 +72,15 @@ flipped = False
 # Spacebar firing state
 space_pressed = False
 last_fired_time = 0  # Timer to control firing rate
+last_random_image_fire_time = 0  # Timer for random images firing lasers
 
 # Random images data for random_image
 random_images = []
 for _ in range(NUM_RANDOM_IMAGES):
     random_x = random.randint(0, WIDTH - random_image_width)
     random_y = random.randint(0, HEIGHT - random_image_height)
-    random_dx = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
-    random_dy = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_dx = random.choice([-FLOAT_SPEED_1, FLOAT_SPEED_1])
+    random_dy = random.choice([-FLOAT_SPEED_1, FLOAT_SPEED_1])
     random_images.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
 
 # Random images data for random_image_2
@@ -80,10 +88,9 @@ random_images_2 = []
 for _ in range(NUM_RANDOM_IMAGES_2):
     random_x = random.randint(0, WIDTH - random_image_2_width)
     random_y = random.randint(0, HEIGHT - random_image_2_height)
-    random_dx = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
-    random_dy = random.choice([-FLOAT_SPEED, FLOAT_SPEED])
+    random_dx = random.choice([-FLOAT_SPEED_2, FLOAT_SPEED_2])
+    random_dy = random.choice([-FLOAT_SPEED_2, FLOAT_SPEED_2])
     random_images_2.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
-
 
 def draw_main_menu():
     screen.blit(background_menu, (0, 0))
@@ -101,6 +108,11 @@ def draw_main_menu():
     screen.blit(play_button, (WIDTH // 2 - play_button.get_width() // 2, HEIGHT // 2 - play_button.get_height() // 2))
     pygame.display.update()
 
+def draw_game_over():
+    screen.fill(WHITE)
+    game_over_text = font.render("Game Over", True, BLACK)
+    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
+    pygame.display.update()
 
 running = True
 while running:
@@ -161,6 +173,14 @@ while running:
             lasers.append({"rect": pygame.Rect(laser_x, laser_y, LASER_WIDTH, LASER_HEIGHT), "direction": -1 if flipped else 1})
             last_fired_time = current_time
 
+        # Random images fire lasers
+        if current_time - last_random_image_fire_time > RANDOM_IMAGE_FIRE_RATE:
+            for img in random_images_2:
+                laser_x = img["x"] + random_image_height // 2-50 # Laser starts from the left side of random image 2
+                laser_y = img["y"] + random_image_2_height // 3+7 - RANDOM_IMAGE_2_LASER_HEIGHT // 2
+                random_image_lasers.append({"rect": pygame.Rect(laser_x, laser_y, RANDOM_IMAGE_2_LASER_WIDTH, RANDOM_IMAGE_2_LASER_HEIGHT)})
+            last_random_image_fire_time = current_time
+
         # Move and draw lasers
         for laser in lasers[:]:
             laser["rect"].x += LASER_SPEED * laser["direction"]  # Move laser in the correct direction
@@ -169,29 +189,60 @@ while running:
             else:
                 pygame.draw.rect(screen, LASER_COLOR, laser["rect"])
 
+        # Move and draw random image lasers
+        for laser in random_image_lasers[:]:
+            laser["rect"].x -= LASER_SPEED  # Lasers move leftwards
+            if laser["rect"].x < 0:
+                random_image_lasers.remove(laser)
+            elif pygame.Rect(image_x, image_y, image_width, image_height).colliderect(laser["rect"]):
+                state = GAME_OVER
+            else:
+                pygame.draw.rect(screen, LASER_COLOR, laser["rect"])
+
         # Move random images (random_image)
-        for img in random_images:
+        for img in random_images[:]:
             img["x"] += img["dx"]
             img["y"] += img["dy"]
             if img["x"] <= 0 or img["x"] >= WIDTH - random_image_width:
                 img["dx"] *= -1
             if img["y"] <= 0 or img["y"] >= HEIGHT - random_image_height:
                 img["dy"] *= -1
+
+            # Check collision with lasers
+            for laser in lasers[:]:
+                laser_rect = laser["rect"]
+                if pygame.Rect(img["x"], img["y"], random_image_width, random_image_height).colliderect(laser_rect):
+                    lasers.remove(laser)
+                    random_images.remove(img)
+                    break
+
             screen.blit(random_image, (img["x"], img["y"]))
 
         # Move random images (random_image_2)
-        for img in random_images_2:
+        for img in random_images_2[:]:
             img["x"] += img["dx"]
             img["y"] += img["dy"]
             if img["x"] <= 0 or img["x"] >= WIDTH - random_image_2_width:
                 img["dx"] *= -1
             if img["y"] <= 0 or img["y"] >= HEIGHT - random_image_2_height:
                 img["dy"] *= -1
+
+            # Check collision with lasers
+            for laser in lasers[:]:
+                laser_rect = laser["rect"]
+                if pygame.Rect(img["x"], img["y"], random_image_2_width, random_image_2_height).colliderect(laser_rect):
+                    lasers.remove(laser)  # Remove the laser
+                    random_images_2.remove(img)  # Remove the random image 2
+                    break
+
             screen.blit(random_image_2, (img["x"], img["y"]))
 
-        # Draw the moving image at its new position
+        # Draw the moving image
         screen.blit(moving_image, (image_x, image_y))
 
-        pygame.display.update()
+    elif state == GAME_OVER:
+        draw_game_over()
+
+    pygame.display.update()
 
 pygame.quit()
