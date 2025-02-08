@@ -13,10 +13,10 @@ BUTTON_HOVER_COLOR = (150, 150, 255)
 MOVE_SPEED = 5  # Speed of movement
 LASER_SPEED = 10  # Speed of the laser
 LASER_COLOR = (255, 0, 0)  # Laser color
-LASER_WIDTH, LASER_HEIGHT = 20, 3  # Laser dimensions
+LASER_WIDTH, LASER_HEIGHT = 200, 3  # Laser dimensions
 FIRE_RATE = 200  # Laser fire rate in milliseconds
 FLOAT_SPEED_1 = 3  # Speed for the first set of random images
-FLOAT_SPEED_2 = 0.5 # Speed for the second set of random images
+FLOAT_SPEED_2 = 0.5  # Speed for the second set of random images
 NUM_RANDOM_IMAGES = 3  # Number of random images to display
 NUM_RANDOM_IMAGES_2 = 2  # Number of random image 2 to display
 RANDOM_IMAGE_FIRE_RATE = 1500  # Fire rate for random image lasers
@@ -42,13 +42,17 @@ random_image_2 = pygame.image.load("C:/Users/Windows 10/Downloads/robot.png")  #
 random_image_2_width, random_image_2_height = 250, 250
 random_image_2 = pygame.transform.scale(random_image_2, (random_image_2_width, random_image_2_height))
 
-# Create screen
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Pygame Example")
-
 # Load game background image
 background_game = pygame.image.load("C:/Users/Windows 10/Downloads/blue-alien-planet-surface-with-desert-rock/32630909-35aa-4364-bf7f-31dc56e1c3d3.jpg")
 background_game = pygame.transform.scale(background_game, (WIDTH, HEIGHT))
+
+# Load game over background image
+background_game_over = pygame.image.load("C:/Users/Windows 10/Downloads/911166.jpg")  # Replace with your image path
+background_game_over = pygame.transform.scale(background_game_over, (WIDTH, HEIGHT))
+
+# Create screen
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Pygame Example")
 
 # Fonts
 font = pygame.font.Font(None, 50)
@@ -109,11 +113,32 @@ def draw_main_menu():
     pygame.display.update()
 
 def draw_game_over():
-    screen.fill(WHITE)
-    game_over_text = font.render("Game Over", True, BLACK)
-    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
+    screen.blit(background_game_over, (0, 0))  # Display the game over background
+    game_over_text = font.render("Game Over", True, WHITE)
+    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 3-70 - game_over_text.get_height() // 2))
+
+    # Retry button
+    retry_button = font.render("Retry", True, BLACK)
+    retry_button_rect = pygame.Rect(WIDTH // 2 - 70, HEIGHT // 2 + 120, 140, 40)
+    pygame.draw.rect(screen, BUTTON_COLOR, retry_button_rect)
+    screen.blit(retry_button, (WIDTH // 2 - retry_button.get_width() // 2, HEIGHT // 2 + 120))
+
+    # Quit button
+    quit_button = font.render("Quit", True, BLACK)
+    quit_button_rect = pygame.Rect(WIDTH // 2 - 70, HEIGHT // 2 + 170, 140, 40)
+    pygame.draw.rect(screen, BUTTON_COLOR, quit_button_rect)
+    screen.blit(quit_button, (WIDTH // 2 - quit_button.get_width() // 2, HEIGHT // 2 + 170))
+
+    # Mouse hover effect
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    if retry_button_rect.collidepoint(mouse_x, mouse_y):
+        pygame.draw.rect(screen, BUTTON_HOVER_COLOR, retry_button_rect)
+    if quit_button_rect.collidepoint(mouse_x, mouse_y):
+        pygame.draw.rect(screen, BUTTON_HOVER_COLOR, quit_button_rect)
+
     pygame.display.update()
 
+# Game loop
 running = True
 while running:
     screen.fill(WHITE)
@@ -127,6 +152,33 @@ while running:
                 button_rect = pygame.Rect(WIDTH // 2 - 50, HEIGHT // 2 - 20, 100, 40)
                 if button_rect.collidepoint(mouse_x, mouse_y):
                     state = GAME_RUNNING
+            elif state == GAME_OVER:
+                mouse_x, mouse_y = event.pos
+                # Retry button clicked
+                if retry_button_rect.collidepoint(mouse_x, mouse_y):
+                    state = GAME_RUNNING
+                    # Reset the game variables like position and laser list
+                    image_x, image_y = WIDTH // 2, HEIGHT // 2
+                    lasers.clear()
+                    random_image_lasers.clear()
+                    random_images = []
+                    random_images_2 = []
+                    for _ in range(NUM_RANDOM_IMAGES):
+                        random_x = random.randint(0, WIDTH - random_image_width)
+                        random_y = random.randint(0, HEIGHT - random_image_height)
+                        random_dx = random.choice([-FLOAT_SPEED_1, FLOAT_SPEED_1])
+                        random_dy = random.choice([-FLOAT_SPEED_1, FLOAT_SPEED_1])
+                        random_images.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
+                    for _ in range(NUM_RANDOM_IMAGES_2):
+                        random_x = random.randint(0, WIDTH - random_image_2_width)
+                        random_y = random.randint(0, HEIGHT - random_image_2_height)
+                        random_dx = random.choice([-FLOAT_SPEED_2, FLOAT_SPEED_2])
+                        random_dy = random.choice([-FLOAT_SPEED_2, FLOAT_SPEED_2])
+                        random_images_2.append({"x": random_x, "y": random_y, "dx": random_dx, "dy": random_dy})
+                # Quit button clicked
+                elif quit_button_rect.collidepoint(mouse_x, mouse_y):
+                    running = False
+
         if event.type == pygame.KEYDOWN:
             if state == GAME_RUNNING:
                 if event.key == pygame.K_SPACE:
@@ -166,9 +218,9 @@ while running:
         current_time = pygame.time.get_ticks()
         if space_pressed and current_time - last_fired_time > FIRE_RATE:
             if flipped:
-                laser_x = image_x  # Laser from the left side when flipped
+                laser_x = image_x + LASER_WIDTH // 2 - 260  # Laser from the left side when flipped
             else:
-                laser_x = image_x + image_width + LASER_WIDTH // 2 - 50  # Laser from the right side
+                laser_x = image_x + image_width + LASER_WIDTH // 2 - 130  # Laser from the right side
             laser_y = image_y + image_height // 2 - LASER_HEIGHT // 3 - 85
             lasers.append({"rect": pygame.Rect(laser_x, laser_y, LASER_WIDTH, LASER_HEIGHT), "direction": -1 if flipped else 1})
             last_fired_time = current_time
@@ -176,8 +228,8 @@ while running:
         # Random images fire lasers
         if current_time - last_random_image_fire_time > RANDOM_IMAGE_FIRE_RATE:
             for img in random_images_2:
-                laser_x = img["x"] + random_image_height // 2-50 # Laser starts from the left side of random image 2
-                laser_y = img["y"] + random_image_2_height // 3+7 - RANDOM_IMAGE_2_LASER_HEIGHT // 2
+                laser_x = img["x"] + random_image_height // 2 - 50  # Laser starts from the left side of random image 2
+                laser_y = img["y"] + random_image_2_height // 3 + 7 - RANDOM_IMAGE_2_LASER_HEIGHT // 2
                 random_image_lasers.append({"rect": pygame.Rect(laser_x, laser_y, RANDOM_IMAGE_2_LASER_WIDTH, RANDOM_IMAGE_2_LASER_HEIGHT)})
             last_random_image_fire_time = current_time
 
@@ -227,17 +279,8 @@ while running:
             if img["y"] <= 0 or img["y"] >= HEIGHT - random_image_2_height:
                 img["dy"] *= -1
 
-            # Check collision with lasers
-            for laser in lasers[:]:
-                laser_rect = laser["rect"]
-                if pygame.Rect(img["x"], img["y"], random_image_2_width, random_image_2_height).colliderect(laser_rect):
-                    lasers.remove(laser)  # Remove the laser
-                    random_images_2.remove(img)  # Remove the random image 2
-                    break
-
             screen.blit(random_image_2, (img["x"], img["y"]))
 
-        # Draw the moving image
         screen.blit(moving_image, (image_x, image_y))
 
     elif state == GAME_OVER:
